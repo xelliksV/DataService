@@ -2,15 +2,14 @@ package com.apihack.controllers;
 
 import com.apihack.model.Consent;
 import com.apihack.model.ConsentRequest;
-import com.apihack.model.ConsentResponse;
+import com.apihack.model.responses.ConsentGetResponse;
+import com.apihack.model.responses.ConsentResponse;
 import com.apihack.model.ConsentType;
 import com.apihack.repositories.ConsentRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
@@ -27,7 +26,7 @@ public class ConsentsController {
     private final ConsentRepository repository;
 
     @PostMapping("/account/request")
-    public void getAccountConsent(@RequestParam String bank, @RequestParam String clientId) {
+    public void requestAccountConsent(@RequestParam String bank, @RequestParam String clientId) {
         ConsentRequest request = new ConsentRequest();
         request.setClient_id(clientId);
         Mono<ConsentResponse> consentResponseMono = builder.build()
@@ -40,5 +39,14 @@ public class ConsentsController {
                 .retrieve()
                 .bodyToMono(ConsentResponse.class);
         repository.save(new Consent(clientId, Objects.requireNonNull(consentResponseMono.block()).getConsent_id(), ConsentType.ACCOUNT));
+    }
+    @GetMapping("/account/{consent_id}")
+    public ResponseEntity<ConsentGetResponse> getAccountConsent(@PathVariable String consent_id, @RequestParam String bank) {
+        Mono<ConsentGetResponse> consentGetResponseMono = builder.build()
+                .get()
+                .uri(String.format(ACCOUNT_URL_TEMPLATE, bank, consent_id))
+                .retrieve()
+                .bodyToMono(ConsentGetResponse.class);
+        return ResponseEntity.ok(consentGetResponseMono.block());
     }
 }
